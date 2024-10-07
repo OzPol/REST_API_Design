@@ -1,0 +1,356 @@
+openapi: "3.0.0"
+info:
+  title: "Movie Ticket Booking API - Seat Reservation"
+  description: "An API for reserving seats for a movie, managing reservations, and checking seat availability."
+  version: "1.0.0"
+  contact:
+    name: "Movie Theater API Team"
+    url: "https://api.movietheater.com"
+    email: "support@movietheater.com"
+
+servers:
+  - url: "https://api.movietheater.com/v1"
+    description: "Production server"
+  - url: "https://staging.api.movietheater.com/v1"
+    description: "Staging server"
+
+security:
+  - bearerAuth: []
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    SeatAvailability:
+      type: object
+      properties:
+        showtime_id:
+          type: string
+        available_seats:
+          type: array
+          items:
+            type: string
+      example:
+        showtime_id: "abc123"
+        available_seats: ["A1", "A2", "A3", "B4"]
+
+    SeatSelectionRequest:
+      type: object
+      properties:
+        seats:
+          type: array
+          items:
+            type: string
+      example:
+        seats: ["A1", "A2", "A3"]
+
+    SeatReservationResponse:
+      type: object
+      properties:
+        reservation_id:
+          type: string
+        seats_reserved:
+          type: array
+          items:
+            type: string
+        confirmation_time:
+          type: string
+          format: date-time
+      example:
+        reservation_id: "res56789"
+        seats_reserved: ["A1", "A2"]
+        confirmation_time: "2024-10-05T15:30:00Z"
+
+    ErrorResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+        message:
+          type: string
+      example:
+        code: 400
+        message: "Bad request: Invalid seat selection"
+
+tags:
+  - name: "Seat Availability"
+    description: "Operations related to checking seat availability for a showtime"
+  - name: "Seat Reservation"
+    description: "Operations related to reserving seats for a showtime"
+  - name: "Reservation Management"
+    description: "Operations related to retrieving, updating, and canceling reservations"
+
+paths:
+
+  /showtimes/{showtime_id}/seats:
+    get:
+      tags:
+        - "Seat Availability"
+      summary: "Get available seats for a specific showtime"
+      operationId: "getSeatAvailability"
+      parameters:
+        - in: path
+          name: showtime_id
+          required: true
+          schema:
+            type: string
+          description: "The ID of the showtime"
+      responses:
+        '200':
+          description: "A list of available seats"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SeatAvailability'
+        '400':
+          description: "Bad request"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: "Showtime not found"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: "Internal server error"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /showtimes/{showtime_id}/seats/reserve:
+    post:
+      tags:
+        - "Seat Reservation"
+      summary: "Reserve seats for a showtime"
+      operationId: "reserveSeats"
+      parameters:
+        - in: path
+          name: showtime_id
+          required: true
+          schema:
+            type: string
+          description: "The ID of the showtime"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SeatSelectionRequest'
+      responses:
+        '201':
+          description: "Seats reserved successfully"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SeatReservationResponse'
+        '400':
+          description: "Bad request due to invalid seat selection"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: "Unauthorized: Authentication required"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: "Showtime or seat not found"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: "Seats already reserved or unavailable"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: "Internal server error"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    get:
+      tags:
+        - "Seat Reservation"
+      summary: "View reserved seats for a showtime"
+      operationId: "getReservedSeats"
+      parameters:
+        - in: path
+          name: showtime_id
+          required: true
+          schema:
+            type: string
+          description: "The ID of the showtime"
+      responses:
+        '200':
+          description: "Successfully retrieved reserved seats"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SeatReservationResponse'
+        '400':
+          description: "Bad request"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: "No reserved seats found for the specified showtime"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: "Internal server error"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /reservations/{reservation_id}:
+    get:
+      tags:
+        - "Reservation Management"
+      summary: "Get reservation details"
+      operationId: "getReservationDetails"
+      parameters:
+        - in: path
+          name: reservation_id
+          required: true
+          schema:
+            type: string
+          description: "The ID of the reservation"
+      responses:
+        '200':
+          description: "Reservation details retrieved successfully"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SeatReservationResponse'
+        '400':
+          description: "Bad request"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: "Reservation not found"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: "Internal server error"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    put:
+      tags:
+        - "Reservation Management"
+      summary: "Update a seat reservation"
+      operationId: "updateReservation"
+      parameters:
+        - in: path
+          name: reservation_id
+          required: true
+          schema:
+            type: string
+          description: "The ID of the reservation"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SeatSelectionRequest'
+      responses:
+        '200':
+          description: "Reservation updated successfully"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SeatReservationResponse'
+        '400':
+          description: "Bad request due to invalid seat selection"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: "Reservation not found"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: "Conflict: Seats already reserved or unavailable"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: "Internal server error"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    delete:
+      tags:
+        - "Reservation Management"
+      summary: "Cancel a seat reservation"
+      operationId: "cancelReservation"
+      parameters:
+        - in: path
+          name: reservation_id
+          required: true
+          schema:
+            type: string
+          description: "The ID of the reservation"
+      responses:
+        '200':
+          description: "Reservation canceled successfully"
+        '400':
+          description: "Bad request"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: "Unauthorized: Authentication required"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: "Forbidden: Reservation cannot be canceled by the current user"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: "Reservation not found"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: "Internal server error"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
